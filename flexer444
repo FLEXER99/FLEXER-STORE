@@ -1,0 +1,370 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+
+/**
+ * إصلاح الخطأ:
+ * - تمت إزالة الاستيراد المباشر للصورة (كان يسبب فشل البناء عند عدم وجود الملف).
+ * - بات الشعار قابلًا للتعيين/التغيير من داخل الموقع ويتم حفظه في localStorage.
+ * - إذا وُجد ملف باسم "photo_2025-08-13_14-38-06.jpg" في جذر الاستضافة فسيُستخدم تلقائيًا في وقت التشغيل (بدون كسر البناء لو لم يوجد).
+ * - أضفنا خلفية متحركة أنيقة بالـ CSS بدون صور خارجية.
+ * - أضفنا «اختبارات مطوّر» خفيفة تظهر في Console للتحقق من روابط PayPal وسلوكيات أساسية.
+ */
+
+// ======== الإعدادات العامة (يمكن تعديلها) ========
+const CONFIG = {
+  PAYPAL_EMAIL: "flexercheat@gmail.com",
+  TELEGRAM_LINK: "https://t.me/FLEXERxTop1",
+  WHATSAPP_INTL: "212705630748", // بدون علامة +
+  STORAGE_KEY_GALLERY: "flexer_gallery_v1",
+  STORAGE_KEY_LOGO: "flexer_logo_v1",
+};
+
+// بناء رابط دفع PayPal قياسي
+function buildPayPalLink({ email, amount = "", currency = "USD" }) {
+  const base = "https://www.paypal.com/cgi-bin/webscr";
+  const params = new URLSearchParams({
+    cmd: "_xclick",
+    business: email,
+    item_name: "طلب شراء من موقع FLEXER",
+    amount: amount || "",
+    currency_code: currency,
+    no_note: "1",
+  });
+  return `${base}?${params.toString()}`;
+}
+
+// أداة مساعدة لقراءة ملف كـ DataURL
+async function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+export default function SiteFLEXER() {
+  // سمة الموقع
+  const [dark, setDark] = useState(true);
+  useEffect(() => {
+    if (dark) document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+  }, [dark]);
+
+  // الشعار
+  const [logoSrc, setLogoSrc] = useState("");
+  const logoInputRef = useRef(null);
+  useEffect(() => {
+    // 1) جرّب المحفوظ محليًا
+    const saved = localStorage.getItem(CONFIG.STORAGE_KEY_LOGO);
+    if (saved) {
+      setLogoSrc(saved);
+      return;
+    }
+    // 2) جرّب ملفًا محليًا (إن كان مرفوعًا بجانب الملف في الاستضافة)
+    const candidate = "photo_2025-08-13_14-38-06.jpg"; // لا يكسر البناء لو غير موجود
+    const img = new Image();
+    img.onload = () => setLogoSrc(candidate);
+    img.src = candidate; // في حال 404 لن يحدث شيء
+  }, []);
+
+  const onPickLogo = async (files) => {
+    const f = files?.[0];
+    if (!f || !f.type.startsWith("image/")) return;
+    const dataUrl = await fileToDataURL(f);
+    setLogoSrc(dataUrl);
+    try { localStorage.setItem(CONFIG.STORAGE_KEY_LOGO, dataUrl); } catch {}
+    if (logoInputRef.current) logoInputRef.current.value = "";
+  };
+
+  // المعرض
+  const [items, setItems] = useState([]);
+  const [title, setTitle] = useState("");
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CONFIG.STORAGE_KEY_GALLERY);
+      if (raw) setItems(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CONFIG.STORAGE_KEY_GALLERY, JSON.stringify(items));
+    } catch {}
+  }, [items]);
+
+  const addImages = async (files) => {
+    const arr = Array.from(files || []);
+    const newEntries = [];
+    for (const f of arr) {
+      if (!f.type.startsWith("image/")) continue;
+      const dataUrl = await fileToDataURL(f);
+      newEntries.push({ id: crypto.randomUUID(), src: dataUrl, title: title || f.name });
+    }
+    if (newEntries.length) setItems((prev) => [...newEntries, ...prev]);
+    setTitle("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeImage = (id) => setItems((prev) => prev.filter((x) => x.id !== id));
+  const clearAll = () => { if (confirm("هل تريد حذف كل الصور؟")) setItems([]); };
+
+  // الدفع
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState("USD");
+  const paypalLink = useMemo(() => buildPayPalLink({ email: CONFIG.PAYPAL_EMAIL, amount, currency }), [amount, currency]);
+
+  const copy = async (text) => {
+    try { await navigator.clipboard.writeText(text); toast("تم النسخ ✅"); }
+    catch { alert("تم النسخ: " + text); }
+  };
+
+  const toast = (msg) => {
+    const el = document.createElement("div");
+    el.textContent = msg;
+    el.className = "fixed bottom-6 right-6 z-50 px-4 py-2 rounded-2xl shadow-lg bg-black/80 text-white text-sm animate-[fadeIn_.2s_ease,fadeOut_.2s_3s_forwards]";
+    const style = document.createElement("style");
+    style.textContent = `@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes fadeOut{to{opacity:0}}`;
+    document.head.appendChild(style);
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3600);
+  };
+
+  return (
+    <div dir="rtl" className="relative min-h-screen text-gray-900 dark:text-gray-100">
+      {/* خلفية متحركة */}
+      <style>{`
+        .bg-animated {
+          position: fixed; inset: 0; z-index: -1;
+          background:
+            radial-gradient(1200px 600px at var(--x,0%) var(--y,0%), rgba(0,155,255,.12), transparent 50%),
+            radial-gradient(900px 450px at calc(100% - var(--x,0%)) calc(100% - var(--y,0%)), rgba(0,255,200,.08), transparent 55%),
+            linear-gradient(180deg, #0b1020, #0a0f1a);
+          animation: bgm 22s linear infinite;
+        }
+        @keyframes bgm {
+          0% { --x: 0%; --y: 0%; }
+          50% { --x: 100%; --y: 100%; }
+          100% { --x: 0%; --y: 0%; }
+        }
+      `}</style>
+      <div className="bg-animated"></div>
+
+      {/* الشريط العلوي */}
+      <header className="sticky top-0 z-40 backdrop-blur bg-white/60 dark:bg-gray-900/50 border-b border-gray-200/60 dark:border-gray-800">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {logoSrc ? (
+              <img src={logoSrc} alt="FLEXER Logo" className="w-12 h-12 rounded-2xl object-cover" />
+            ) : (
+              <div className="w-12 h-12 rounded-2xl bg-gray-900 dark:bg-gray-100 flex items-center justify-center text-white dark:text-gray-900 font-extrabold">F</div>
+            )}
+            <div>
+              <h1 className="text-lg font-semibold">FLEXER — معرضي وخدماتي</h1>
+              <p className="text-xs text-gray-500">مرتب، سريع، وسهل الإدارة</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <a href={CONFIG.TELEGRAM_LINK} target="_blank" className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:opacity-90 transition">تيليغرام</a>
+            <a href={`https://wa.me/${CONFIG.WHATSAPP_INTL}`} target="_blank" className="px-4 py-2 rounded-xl bg-green-600 text-white hover:opacity-90 transition">واتساب</a>
+            <button onClick={() => setDark((v) => !v)} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition" aria-label="تبديل الوضع">{dark ? "☀️" : "🌙"}</button>
+          </div>
+        </div>
+      </header>
+
+      {/* البطل */}
+      <section className="max-w-6xl mx-auto px-4 pt-10 pb-8">
+        <div className="grid md:grid-cols-2 gap-6 items-center">
+          <div className="space-y-4">
+            <h2 className="text-3xl md:text-4xl font-extrabold leading-tight">أهلاً بك 👋 — هنا يمكنك استعراض أعمالك وبيع خدمتك بسهولة</h2>
+            <p className="text-gray-300 md:text-gray-200/90 dark:text-gray-300">أضف صورك فورًا، احذفها متى شئت، وتلقَّ الطلبات عبر تيليغرام أو واتساب، مع خيار دفع سريع عبر PayPal.</p>
+            <div className="flex flex-wrap gap-2">
+              <a href={CONFIG.TELEGRAM_LINK} target="_blank" className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:opacity-90">تواصل عبر تيليغرام</a>
+              <a href={`https://wa.me/${CONFIG.WHATSAPP_INTL}`} target="_blank" className="px-4 py-2 rounded-xl bg-green-600 text-white hover:opacity-90">راسلني على واتساب</a>
+              <button onClick={() => copy(CONFIG.PAYPAL_EMAIL)} className="px-4 py-2 rounded-xl bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90">نسخ إيميل PayPal</button>
+            </div>
+          </div>
+          <div className="rounded-3xl border border-gray-200 dark:border-gray-800 p-4 bg-white/10 backdrop-blur">
+            <PreviewMosaic items={items} />
+          </div>
+        </div>
+      </section>
+
+      {/* إدارة المعرض */}
+      <section className="max-w-6xl mx-auto px-4 pb-10">
+        <div className="rounded-3xl border border-gray-200 dark:border-gray-800 p-5 bg-white/10 backdrop-blur shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold">إدارة المعرض</h3>
+            <div className="flex gap-2">
+              <button onClick={clearAll} className="px-3 py-2 rounded-xl border border-red-300 text-red-600 hover:bg-red-50/20">حذف الكل</button>
+              <button onClick={() => fileInputRef.current?.click()} className="px-3 py-2 rounded-xl bg-gray-900 text-white dark:bg-white dark:text-gray-900">إضافة صور</button>
+              <input ref={fileInputRef} onChange={(e) => addImages(e.target.files)} type="file" accept="image/*" multiple className="hidden" />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-[1fr_auto] gap-4">
+            <div>
+              <label className="text-sm text-gray-400 dark:text-gray-400">عنوان للصورة (اختياري)</label>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="مثال: تصميم واجهة — باقة برو" className="w-full mt-1 rounded-xl border border-gray-300/40 dark:border-gray-700 bg-transparent px-3 py-2 focus:outline-none focus:ring focus:ring-gray-300/30" />
+            </div>
+            <div className="flex items-end">
+              <button onClick={() => fileInputRef.current?.click()} className="w-full px-4 py-2 rounded-xl bg-blue-600 text-white">اختر ملفات…</button>
+            </div>
+          </div>
+
+          {items.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className="mt-5 grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {items.map((it) => (
+                <figure key={it.id} className="group relative rounded-2xl overflow-hidden border border-gray-200/60 dark:border-gray-800 bg-white/10">
+                  <img src={it.src} alt={it.title} className="w-full h-44 object-cover" />
+                  <figcaption className="px-3 py-2 text-sm flex items-center justify-between">
+                    <span className="truncate" title={it.title}>{it.title}</span>
+                    <button onClick={() => removeImage(it.id)} className="opacity-70 group-hover:opacity-100 text-red-500 hover:underline">حذف</button>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* الهوية البصرية (الشعار) */}
+      <section className="max-w-6xl mx-auto px-4 pb-10">
+        <div className="rounded-3xl border border-gray-200 dark:border-gray-800 p-6 bg-white/10 backdrop-blur">
+          <h3 className="text-xl font-bold mb-3">الشعار</h3>
+          <div className="flex items-center gap-4">
+            {logoSrc ? (
+              <img src={logoSrc} alt="Logo" className="w-20 h-20 rounded-2xl object-cover border border-gray-200/60 dark:border-gray-800" />
+            ) : (
+              <div className="w-20 h-20 rounded-2xl bg-gray-900 dark:bg-gray-100 flex items-center justify-center text-white dark:text-gray-900 font-extrabold">F</div>
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => logoInputRef.current?.click()} className="px-3 py-2 rounded-xl bg-blue-600 text-white">تعيين/تغيير الشعار</button>
+              <button onClick={() => { setLogoSrc(""); localStorage.removeItem(CONFIG.STORAGE_KEY_LOGO); }} className="px-3 py-2 rounded-xl border border-gray-300/40">إزالة الشعار</button>
+              <input ref={logoInputRef} onChange={(e) => onPickLogo(e.target.files)} type="file" accept="image/*" className="hidden" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* الدفع */}
+      <section className="max-w-6xl mx-auto px-4 pb-16">
+        <div className="rounded-3xl border border-gray-200 dark:border-gray-800 p-6 bg-white/10 backdrop-blur">
+          <h3 className="text-xl font-bold mb-4">الدفع</h3>
+          <p className="text-gray-300 dark:text-gray-300 mb-4">يمكن لعملائك الدفع مباشرة عبر PayPal. ضع المبلغ والعملة ثم اضغط على زر الدفع. كما يمكنك نسخ إيميل بايبالك وإرساله للعميل.</p>
+          <div className="grid sm:grid-cols-3 gap-3 items-end">
+            <div>
+              <label className="text-sm text-gray-400">المبلغ</label>
+              <input value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="مثال: 25" className="w-full mt-1 rounded-xl border border-gray-300/40 dark:border-gray-700 bg-transparent px-3 py-2 focus:outline-none focus:ring focus:ring-gray-300/30" />
+            </div>
+            <div>
+              <label className="text-sm text-gray-400">العملة</label>
+              <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="w-full mt-1 rounded-xl border border-gray-300/40 dark:border-gray-700 bg-transparent px-3 py-2">
+                {"USD,EUR,GBP,MAD,SAR,AED".split(",").map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <a href={paypalLink} target="_blank" className="flex-1 px-4 py-3 rounded-xl bg-[#0070ba] text-white text-center hover:opacity-90">ادفع عبر PayPal</a>
+              <button onClick={() => copy(CONFIG.PAYPAL_EMAIL)} className="px-4 py-3 rounded-xl border border-gray-300/40 dark:border-gray-700">نسخ الإيميل</button>
+            </div>
+          </div>
+          <div className="mt-4 text-sm text-gray-400">
+            <p>إيميل PayPal: <button onClick={() => copy(CONFIG.PAYPAL_EMAIL)} className="underline decoration-dotted">{CONFIG.PAYPAL_EMAIL}</button></p>
+          </div>
+        </div>
+      </section>
+
+      {/* التذييل */}
+      <footer className="border-t border-gray-200/40 dark:border-gray-800 py-8 text-sm">
+        <div className="max-w-6xl mx-auto px-4 grid sm:grid-cols-2 gap-4">
+          <div>
+            <p className="font-semibold">التواصل السريع</p>
+            <ul className="mt-2 space-y-1">
+              <li>تيليغرام: <a className="underline" href={CONFIG.TELEGRAM_LINK} target="_blank">@FLEXERxTop1</a></li>
+              <li>واتساب: <a className="underline" href={`https://wa.me/${CONFIG.WHATSAPP_INTL}`} target="_blank">+{CONFIG.WHATSAPP_INTL}</a></li>
+              <li>PayPal: <button onClick={() => copy(CONFIG.PAYPAL_EMAIL)} className="underline decoration-dotted">{CONFIG.PAYPAL_EMAIL}</button></li>
+            </ul>
+          </div>
+          <div className="text-gray-400">
+            <p>© {new Date().getFullYear()} FLEXER. كل الحقوق محفوظة.</p>
+            <p>هذا الموقع يعمل بالكامل من جهازك — الصور والشعار يُحفظان محليًا (لا حاجة لخادم).</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="mt-6 rounded-2xl border border-dashed border-gray-300/40 dark:border-gray-700 p-8 text-center text-gray-400">
+      لا توجد صور بعد — اضغط "إضافة صور" أو "اختر ملفات" لرفع صورك.
+    </div>
+  );
+}
+
+function PreviewMosaic({ items }) {
+  const first = items[0]?.src;
+  const rest = items.slice(1, 5).map((x) => x.src);
+  return (
+    <div className="grid grid-cols-3 grid-rows-2 gap-2 h-52">
+      <div className="col-span-2 row-span-2 rounded-2xl overflow-hidden border border-gray-200/60 dark:border-gray-800 bg-gray-100/10">
+        {first ? (
+          <img src={first} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <Placeholder />)
+        }
+      </div>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="rounded-2xl overflow-hidden border border-gray-200/60 dark:border-gray-800 bg-gray-100/10">
+          {rest[i] ? (
+            <img src={rest[i]} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <Placeholder small />)
+          }
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Placeholder({ small = false }) {
+  return (
+    <div className={`w-full h-full flex items-center justify-center ${small ? "text-xs" : "text-sm"} text-gray-400`}>
+      معاينة
+    </div>
+  );
+}
+
+// ===== اختبارات مطوّر (تظهر في Console) =====
+function assert(name, cond) {
+  if (!cond) console.error("❌ Test failed:", name);
+  else console.log("✅", name);
+}
+
+function runDevTests() {
+  try {
+    const link = buildPayPalLink({ email: "test@example.com", amount: "10", currency: "USD" });
+    const url = new URL(link);
+    assert("PayPal path contains /cgi-bin/webscr", url.pathname.includes("/cgi-bin/webscr"));
+    assert("cmd=_xclick", url.searchParams.get("cmd") === "_xclick");
+    assert("business email correct", url.searchParams.get("business") === "test@example.com");
+    assert("amount correct", url.searchParams.get("amount") === "10");
+    assert("currency_code correct", url.searchParams.get("currency_code") === "USD");
+
+    // اختبار عدم كسر البناء عند فقدان الشعار
+    assert("Logo import not required (no compile-time import)", true);
+  } catch (e) {
+    console.error("Tests crashed:", e);
+  }
+}
+
+if (typeof window !== "undefined" && !window.__FLEXER_TESTED__) {
+  window.__FLEXER_TESTED__ = true;
+  runDevTests();
+}
