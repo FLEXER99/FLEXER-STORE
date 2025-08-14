@@ -1,0 +1,37 @@
+:root { --bg:#ffffff; --fg:#111; --muted:#666; --card:#f6f7f9; --brand:#0ea5e9; --accent:#22c55e; --border:#e5e7eb; }
+:root[data-theme="dark"]{ --bg:#0b0c0f; --fg:#f3f4f6; --muted:#aaa; --card:#15161a; --border:#2a2d33; }
+*{ box-sizing:border-box; }
+body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--fg); }
+.container{ max-width:1100px; margin:0 auto; padding:16px; }
+header.nav{ position:sticky; top:0; z-index:10; background:var(--bg); border-bottom:1px solid var(--border); }
+.brand{ font-weight:800; }
+.tabs{ display:flex; gap:10px; align-items:center; }
+.tab{ padding:10px 14px; background:var(--card); border:1px solid var(--border); border-radius:12px; cursor:pointer; }
+.btn{ padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:transparent; color:var(--fg); cursor:pointer; }
+.btn.primary{ background:var(--brand); color:#fff; border-color:transparent; }
+.btn.success{ background:var(--accent); color:#fff; border-color:transparent; }
+.card{ background:var(--card); border:1px solid var(--border); border-radius:16px; padding:16px; }
+.grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(250px,1fr)); gap:16px; }
+.grid.two{ grid-template-columns:1fr 1fr; }
+.grid.single{ grid-template-columns:1fr; }
+.row{ display:flex; gap:12px; align-items:center; }
+.right{ text-align:right; }
+.center{ text-align:center; }
+.hidden{ display:none !important; }
+.input, textarea{ width:100%; padding:12px; border-radius:12px; border:1px solid var(--border); background:transparent; color:var(--fg); }
+.price{ font-weight:700; }
+.hero{ display:grid; grid-template-columns:1.2fr 1fr; gap:16px; }
+@media (max-width:900px){ .hero{ grid-template-columns:1fr; } .grid.two{ grid-template-columns:1fr; } }
+img{max-width:100%; border-radius:12px;}
+
+/* Theme toggle — النقطة سوداء في النهاري وبيضاء في الليلي */
+#themeSwitch{ padding:6px 10px; }
+.theme-toggle{ width:46px; height:26px; border-radius:999px; position:relative; border:2px solid var(--fg); cursor:pointer; }
+.theme-toggle .dot{ width:18px; height:18px; border-radius:999px; position:absolute; top:2px; left:2px; transition:.2s; }
+:root[data-theme="light"] .theme-toggle{ background:#fff; }
+:root[data-theme="light"] .theme-toggle .dot{ background:#000; transform:translateX(0); }
+:root[data-theme="dark"] .theme-toggle{ background:#000; }
+:root[data-theme="dark"] .theme-toggle .dot{ background:#fff; transform:translateX(18px); }
+
+.note{ color:var(--muted); font-size:.9rem; }
+.note.danger{ color:#e11d48; }

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>متجري الإلكتروني</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="nav container">
+    <div class="brand">🛍️ متجري</div>
+    <div class="tabs">
+      <button class="tab" data-route="home">الرئيسية</button>
+      <button class="tab" data-route="products">المنتجات</button>
+      <button class="tab" data-route="contact">التواصل</button>
+      <button class="tab hidden" data-route="orders" id="ordersTab">طلباتي</button>
+      <div class="tab" id="themeSwitch" title="الوضع الليلي/النهاري">
+        <div class="theme-toggle"><div class="dot"></div></div>
+      </div>
+      <button class="btn hidden" id="logoutBtn">تسجيل الخروج</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- AUTH -->
+    <section id="authSection" class="grid two">
+      <div class="card">
+        <h2>تسجيل الدخول</h2>
+        <form id="loginForm" class="right">
+          <input class="input" name="email" placeholder="البريد الإلكتروني" required>
+          <input class="input" type="password" name="password" placeholder="كلمة المرور" required>
+          <button class="btn primary" type="submit">دخول</button>
+          <div id="loginMsg" class="note danger"></div>
+        </form>
+      </div>
+      <div class="card">
+        <h2>تسجيل جديد</h2>
+        <form id="registerForm" class="right">
+          <input class="input" name="email" placeholder="البريد الإلكتروني" required>
+          <input class="input" type="password" name="password" placeholder="كلمة المرور" required>
+          <button class="btn success" type="submit">تسجيل</button>
+          <div id="registerMsg" class="note danger"></div>
+        </form>
+      </div>
+    </section>
+
+    <!-- HOME -->
+    <section id="home" class="hidden">
+      <div class="hero">
+        <div class="card">
+          <h2>مرحباً <span id="userEmail"></span> 👋</h2>
+          <p class="note">هذه الصفحة الرئيسية — أضف تعريفاً بالمتجر وصوراً كما تشاء.</p>
+        </div>
+        <img src="assets/cover.jpg" class="card" alt="cover">
+      </div>
+    </section>
+
+    <!-- PRODUCTS -->
+    <section id="products" class="hidden">
+      <div class="card">
+        <h2>المنتجات</h2>
+        <div id="productsGrid" class="grid"></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>إدارة المنتجات (محليًا)</h3>
+        <form id="addProductForm" class="grid two">
+          <input class="input" name="name" placeholder="اسم المنتج" required>
+          <input class="input" name="price" placeholder="السعر بالدولار" required type="number" min="0" step="0.01">
+          <input class="input" name="image" placeholder="رابط الصورة (اختياري)">
+          <input class="input" name="desc" placeholder="الوصف (اختياري)">
+          <button class="btn success" type="submit">إضافة المنتج</button>
+          <button class="btn" id="clearProducts" type="button">حذف كل المنتجات (محلي)</button>
+        </form>
+        <p class="note">* يتم حفظ المنتجات في المتصفح فقط (LocalStorage). للنشر على GitHub Pages ارفع هذا المشروع كما هو.</p>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact" class="hidden">
+      <div class="card center">
+        <h2>تواصل معنا</h2>
+        <div class="row center" style="justify-content:center;margin-top:10px">
+          <a class="btn" href="https://wa.me/212705630748" target="_blank" rel="noopener">📱 واتساب</a>
+          <a class="btn" href="https://t.me/FLEXERxTop1" target="_blank" rel="noopener">💬 تلغرام</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ORDERS -->
+    <section id="orders" class="hidden">
+      <div class="card">
+        <h2>طلباتي</h2>
+        <div id="ordersList" class="grid single"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
